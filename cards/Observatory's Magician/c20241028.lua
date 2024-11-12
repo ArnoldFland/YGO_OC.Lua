@@ -22,7 +22,6 @@ function s.initial_effect(c)
 	e2:SetCode(EVENT_DESTROYED)
 	e2:SetProperty(EFFECT_FLAG_DAMAGE_STEP+EFFECT_FLAG_DELAY)
 	e2:SetRange(LOCATION_HAND+LOCATION_EXTRA)
-	e2:SetCountLimit(1, {20241028, 1})
 	e2:SetCondition(s.spcon)
 	e2:SetTarget(s.sptg)
 	e2:SetOperation(s.spop)
@@ -38,11 +37,11 @@ function s.initial_effect(c)
 	e3:SetProperty(EFFECT_FLAG_DELAY)
 	e3:SetRange(LOCATION_MZONE)
 	e3:SetCountLimit(1,20241028+EFFECT_COUNT_CODE_DUEL)
-	e3:SetCost(aux.spcost)
+	e3:SetCost(s.xyzcost)
 	e3:SetTarget(s.xyztg)
 	e3:SetOperation(s.xyzop)
 	c:RegisterEffect(e3)
-	Duel.AddCustomActivityCounter(s,ACTIVITY_SPSUMMON,s.counterfilter)
+	--Duel.AddCustomActivityCounter(s,ACTIVITY_SPSUMMON,s.counterfilter)
 end
 --
 --p1 m1 bingo:
@@ -106,18 +105,64 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 -- m2 XyzSummon
-function s.xyzfilter(c)
-	return c:IsXyzSummonable(nil)
+function s.xyzcost(e,tp,eg,ep,ev,re,r,rp,chk)
+    if chk==0 then return e:GetHandler():IsReleasable() end
+    Duel.Release(e:GetHandler(),REASON_COST)
+end
+function s.xyzfilter(c,e)
+	local g=Duel.GetMatchingGroup(function (tc)
+		return tc:IsRankAbove(1) and tc:IsFaceup()
+	end,e:GetHandlerPlayer(),LOCATION_MZONE,0,nil)
+	local t={}
+	for card in aux.Next(g) do
+		local e1=Effect.CreateEffect(e:GetHandler())
+		e1:SetType(EFFECT_TYPE_SINGLE)
+		e1:SetCode(EFFECT_XYZ_LEVEL)
+		e1:SetValue(function ()
+			return c:GetRank()
+		end)
+		card:RegisterEffect(e1)
+		table.insert(t,e1)
+	end
+    local result=c:IsXyzSummonable(Duel.GetMatchingGroup(nil,e:GetHandlerPlayer(),LOCATION_ONFIELD+LOCATION_HAND,0,e:GetHandler()))
+	for _,v in ipairs(t) do
+		v:Reset()
+	end
+	return result
 end
 function s.xyztg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.IsExistingMatchingCard(s.xyzfilter,tp,LOCATION_EXTRA,0,1,nil) end
-	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_EXTRA)
+    if chk==0 then return Duel.IsExistingMatchingCard(s.xyzfilter,tp,LOCATION_EXTRA,0,1,nil,e) end
+    Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_EXTRA)
 end
 function s.xyzop(e,tp,eg,ep,ev,re,r,rp)
-	local g=Duel.GetMatchingGroup(s.xyzfilter,tp,LOCATION_EXTRA,0,nil)
-	if g:GetCount()>0 then
-		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
-		local tg=g:Select(tp,1,1,nil)
-		Duel.XyzSummon(tp,tg:GetFirst(),nil)
+    local sg=Duel.GetMatchingGroup(s.xyzfilter,tp,LOCATION_EXTRA,0,nil,e)
+    if sg:GetCount()>0 then
+        Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
+        local tc=sg:Select(tp,1,1,nil):GetFirst()
+		local g=Duel.GetMatchingGroup(function (c) return c:IsRankAbove(1) and c:IsFaceup() end,tp,LOCATION_MZONE,0,nil)
+		local t={}
+		for card in aux.Next(g) do
+			local e1=Effect.CreateEffect(e:GetHandler())
+			e1:SetType(EFFECT_TYPE_SINGLE)
+			e1:SetCode(EFFECT_XYZ_LEVEL)
+			e1:SetValue(function ()
+				return tc:GetRank()
+			end)
+			card:RegisterEffect(e1)
+			table.insert(t,e1)
+		end
+		local mg=Duel.SelectXyzMaterial(tp,tc,tc.f,tc:GetRank(),tc.min,tc.max,Duel.GetMatchingGroup(nil,tp,LOCATION_ONFIELD+LOCATION_HAND,0,nil))
+		local over_group=Group.CreateGroup()
+		for mc in aux.Next(mg) do
+			over_group:Merge(mc:GetOverlayGroup())
+		end
+		Duel.SendtoGrave(over_group,REASON_RULE)
+		tc:SetMaterial(mg)
+		Duel.Overlay(tc,mg)
+		Duel.SpecialSummon(tc,SUMMON_TYPE_XYZ,tp,tp,false,false,POS_FACEUP)
+		tc:CompleteProcedure()
+    	for _,v in ipairs(t) do
+			v:Reset()
+		end
 	end
 end
