@@ -124,7 +124,7 @@ function s.xyzfilter(c,e)
 		card:RegisterEffect(e1)
 		table.insert(t,e1)
 	end
-    local result=c:IsXyzSummonable(Duel.GetMatchingGroup(nil,e:GetHandlerPlayer(),LOCATION_ONFIELD+LOCATION_HAND,0,e:GetHandler()))
+    local result=c:IsXyzSummonable(Duel.GetMatchingGroup(nil,e:GetHandlerPlayer(),LOCATION_MZONE+LOCATION_HAND,0,e:GetHandler()))
 	for _,v in ipairs(t) do
 		v:Reset()
 	end
@@ -151,7 +151,12 @@ function s.xyzop(e,tp,eg,ep,ev,re,r,rp)
 			card:RegisterEffect(e1)
 			table.insert(t,e1)
 		end
-		local mg=Duel.SelectXyzMaterial(tp,tc,tc.f,tc:GetRank(),tc.min,tc.max,Duel.GetMatchingGroup(nil,tp,LOCATION_ONFIELD+LOCATION_HAND,0,nil))
+		local min=tc.min
+		local max=tc.max
+		local f=tc.f
+		::cancle::
+		local mg=Duel.SelectXyzMaterial(tp,tc,f,tc:GetRank(),min,max,Duel.GetMatchingGroup(nil,tp,LOCATION_MZONE+LOCATION_HAND,0,nil))
+		if not mg or mg:GetCount()==0 then goto cancle end
 		local over_group=Group.CreateGroup()
 		for mc in aux.Next(mg) do
 			over_group:Merge(mc:GetOverlayGroup())
