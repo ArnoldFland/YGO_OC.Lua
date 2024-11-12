@@ -88,13 +88,15 @@ function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
 	end
 	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,c,1,0,0)
 end
+local code_list={37803970,278136610,53208660,11481610,74850403,1344018,7799906,40318957,73511233,56675280,76794549,12289247}
 function s.penfilter2(c)
-	return (c:IsSetCard(0x98) or c:IsSetCard(0x985) or c:IsCode(37803970) or c:IsCode(278136610) or c:IsCode(53208660) or c:IsCode(11481610) or c:IsCode(74850403) or c:IsCode(1344018) or c:IsCode(7799906) or c:IsCode(40318957) or c:IsCode(73511233) or c:IsCode(56675280)) or c:IsCode(76794549) or c:IsCode(12289247) and not c:IsCode(20241028) and c:IsType(TYPE_MONSTER + TYPE_SPELL + TYPE_TRAP) and c:IsAbleToHand()
+	return c:IsSetCard(0x98) or c:IsSetCard(0x985) or c:IsCode(table.unpack(code_list)) and not c:IsCode(20241028) and c:IsAbleToHand()
 end
 function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if (c:IsLocation(LOCATION_HAND) or (c:IsLocation(LOCATION_EXTRA) and c:IsFaceup())) and c:IsRelateToEffect(e) then
-		if Duel.SpecialSummon(c,0,tp,tp,false,false,POS_FACEUP)~=0 then
+		if Duel.SpecialSummon(c,0,tp,tp,false,false,POS_FACEUP)~=0 and Duel.IsExistingMatchingCard(s.penfilter2,tp,LOCATION_DECK,0,1,nil) and Duel.SelectYesNo(tp,aux.Stringid(id,2)) then
+			Duel.BreakEffect()
 			Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATOHAND)
 			local g=Duel.SelectMatchingCard(tp,s.penfilter2,tp,LOCATION_DECK,0,1,1,nil)
 			if #g>0 then
@@ -124,7 +126,7 @@ function s.xyzfilter(c,e)
 		card:RegisterEffect(e1)
 		table.insert(t,e1)
 	end
-    local result=c:IsXyzSummonable(Duel.GetMatchingGroup(nil,e:GetHandlerPlayer(),LOCATION_ONFIELD+LOCATION_HAND,0,e:GetHandler()))
+    local result=c:IsXyzSummonable(Duel.GetMatchingGroup(nil,e:GetHandlerPlayer(),LOCATION_MZONE+LOCATION_HAND,0,e:GetHandler()))
 	for _,v in ipairs(t) do
 		v:Reset()
 	end
@@ -151,7 +153,12 @@ function s.xyzop(e,tp,eg,ep,ev,re,r,rp)
 			card:RegisterEffect(e1)
 			table.insert(t,e1)
 		end
-		local mg=Duel.SelectXyzMaterial(tp,tc,tc.f,tc:GetRank(),tc.min,tc.max,Duel.GetMatchingGroup(nil,tp,LOCATION_ONFIELD+LOCATION_HAND,0,nil))
+		local min=tc.min
+		local max=tc.max
+		local f=tc.f
+		::cancle::
+		local mg=Duel.SelectXyzMaterial(tp,tc,f,tc:GetRank(),min,max,Duel.GetMatchingGroup(nil,tp,LOCATION_MZONE+LOCATION_HAND,0,nil))
+		if not mg or mg:GetCount()==0 then goto cancle end
 		local over_group=Group.CreateGroup()
 		for mc in aux.Next(mg) do
 			over_group:Merge(mc:GetOverlayGroup())
