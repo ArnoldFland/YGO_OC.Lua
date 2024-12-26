@@ -4,7 +4,6 @@ function s.initial_effect(c)
 	-- Link summon
 	aux.AddLinkProcedure(c,aux.FilterBoolFunction(Card.IsType,TYPE_PENDULUM),1,1,s.lcheck)
 	c:EnableReviveLimit()
-	
 	-- Effect 1: Discard a card to place a Pendulum monster from Deck into Pendulum Zone
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
@@ -28,7 +27,6 @@ function s.initial_effect(c)
 	e2:SetOperation(s.pop)
 	c:RegisterEffect(e2)
 end
-
 -- Link summon 
 function s.lcheck(g,lc,tp)
 	return g:IsExists(Card.IsLinkSetCard,1,nil,0x985,0x98)
@@ -37,13 +35,11 @@ end
 function s.setfilter(c)
 	return c:IsType(TYPE_PENDULUM) and not c:IsForbidden()
 end
-
 -- Effect 1 cost 
 function s.spcost(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return Duel.IsExistingMatchingCard(Card.IsDiscardable,tp,LOCATION_HAND,0,1,nil) end
 	Duel.DiscardHand(tp,Card.IsDiscardable,1,1,REASON_COST+REASON_DISCARD)
 end
-
 -- place P monster from Deck to P Zone
 function s.settg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then
@@ -51,7 +47,6 @@ function s.settg(e,tp,eg,ep,ev,re,r,rp,chk)
 			and Duel.IsExistingMatchingCard(s.setfilter,tp,LOCATION_DECK,0,1,nil)
 	end
 end
-
 function s.setop(e,tp,eg,ep,ev,re,r,rp)
 	if not (Duel.CheckLocation(tp,LOCATION_PZONE,0) or Duel.CheckLocation(tp,LOCATION_PZONE,1)) then return end
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TOFIELD)
