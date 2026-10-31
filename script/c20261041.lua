@@ -3,7 +3,7 @@ local s,id=GetID()
 function s.initial_effect(c)
 	aux.AddCodeList(c,id)
 	--同调召唤条件：「混沌时空」同调+包含光属性同调调整的怪兽2只以上
-	aux.AddSynchroProcedure(c,s.tunerfilter,2,99,s.matcheck)
+	aux.AddSynchroProcedure(c,s.tunerfilter,aux.NonTuner(nil),2)
 	c:EnableReviveLimit()
 	--同调召唤时可把对方场上最多1只怪兽作为素材
 	local e0=Effect.CreateEffect(c)

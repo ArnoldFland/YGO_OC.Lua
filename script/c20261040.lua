@@ -4,7 +4,7 @@ function s.initial_effect(c)
 	aux.AddCodeList(c,id)
 	aux.EnablePendulumAttribute(c)
 	--同调召唤：调整+调整以外1只以上
-	aux.AddSynchroProcedure(c,nil,1,1)
+	aux.AddSynchroProcedure(c,nil,aux.NonTuner(nil),1)
 	c:EnableReviveLimit()
 	--灵摆①：场上有混沌时空同调时，额外送墓1张，特召这张卡
 	local e1=Effect.CreateEffect(c)

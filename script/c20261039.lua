@@ -4,7 +4,7 @@ function s.initial_effect(c)
 	aux.AddCodeList(c,id)
 	aux.EnablePendulumAttribute(c)
 	--同调召唤：调整+调整以外1只以上
-	aux.AddSynchroProcedure(c,nil,1,1)
+	aux.AddSynchroProcedure(c,nil,aux.NonTuner(nil),1)
 	c:EnableReviveLimit()
 	--灵摆①：以8星以下天使族为对象，同调召唤同等级天使族同调，这张卡回额外
 	local e1=Effect.CreateEffect(c)

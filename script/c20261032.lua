@@ -128,21 +128,24 @@ function s.pop(e,tp,eg,ep,ev,re,r,rp)
 	Duel.RegisterEffect(e1,tp)
 end
 
---怪兽①：同调召唤（这张卡 + 卡组的非调整「混沌时空」，等级合计直到8）
+--怪兽①：同调召唤（这张卡 + 卡组的非调整「混沌时空」，等级合计8）
 function s.ntfilter(c)
-	return c:IsSetCard(0x986) and not c:IsType(TYPE_TUNER) and c:IsCanBeSynchroMaterial()
+	return c:IsSetCard(0x986) and c:IsType(TYPE_MONSTER) and not c:IsType(TYPE_TUNER) and c:IsAbleToGrave()
 end
-function s.synfilter(c,mg)
-	return c:IsSetCard(0x986) and c:IsType(TYPE_SYNCHRO) and c:IsLevelBelow(8)
-		and c:IsSynchroSummonable(nil,mg)
+function s.synfilter(c,e,tp)
+	return c:IsSetCard(0x986) and c:IsType(TYPE_SYNCHRO)
+		and c:IsCanBeSpecialSummoned(e,SUMMON_TYPE_SYNCHRO,tp,false,false)
 end
 function s.syntg(e,tp,eg,ep,ev,re,r,rp,chk)
 	local c=e:GetHandler()
-	local mg=Duel.GetMatchingGroup(s.ntfilter,tp,LOCATION_DECK,0,c)
-	mg:AddCard(c)
+	local clv=c:GetLevel()
+	local lv=8-clv
+	local g=Duel.GetMatchingGroup(s.ntfilter,tp,LOCATION_DECK,0,nil)
 	if chk==0 then
-		return Duel.IsExistingMatchingCard(s.synfilter,tp,LOCATION_EXTRA,0,1,nil,mg)
+		return clv>0 and lv>0 and g:CheckWithSumEqual(Card.GetLevel,lv,1,99)
+			and Duel.IsExistingMatchingCard(s.synfilter,tp,LOCATION_EXTRA,0,1,nil,e,tp)
 	end
+	Duel.SetOperationInfo(0,CATEGORY_TOGRAVE,nil,1,tp,LOCATION_DECK)
 	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_EXTRA)
 end
 function s.extra_splimit(e,c,sump,sumtype,sumpos,targetp,se)
@@ -150,13 +153,22 @@ function s.extra_splimit(e,c,sump,sumtype,sumpos,targetp,se)
 end
 function s.synop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
-	local mg=Duel.GetMatchingGroup(s.ntfilter,tp,LOCATION_DECK,0,c)
-	mg:AddCard(c)
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
-	local sg=Duel.SelectMatchingCard(tp,s.synfilter,tp,LOCATION_EXTRA,0,1,1,nil,mg)
-	local sc=sg:GetFirst()
-	if sc then
-		Duel.SynchroSummon(tp,sc,nil,mg)
+	local clv=c:GetLevel()
+	local lv=8-clv
+	if not c:IsRelateToEffect(e) or lv<=0 then return end
+	local g=Duel.GetMatchingGroup(s.ntfilter,tp,LOCATION_DECK,0,nil)
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TOGRAVE)
+	local tg=g:SelectWithSumEqual(tp,Card.GetLevel,lv,1,99)
+	if #tg>0 then
+		tg:AddCard(c)
+		if Duel.SendtoGrave(tg,REASON_EFFECT)>1 and tg:IsExists(Card.IsLocation,1,nil,LOCATION_GRAVE) then
+			Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
+			local sg=Duel.SelectMatchingCard(tp,s.synfilter,tp,LOCATION_EXTRA,0,1,1,nil,e,tp)
+			local sc=sg:GetFirst()
+			if sc and Duel.SpecialSummon(sc,SUMMON_TYPE_SYNCHRO,tp,tp,false,false,POS_FACEUP)>0 then
+				sc:CompleteProcedure()
+			end
+		end
 	end
 	--这个回合自己不是「混沌时空」怪兽不能从额外卡组特殊召唤
 	local e1=Effect.CreateEffect(c)

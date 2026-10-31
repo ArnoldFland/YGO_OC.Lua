@@ -85,52 +85,69 @@ function s.aclimit(e,re,tp)
 	return not re:GetHandler():IsSetCard(0x986)
 end
 
---灵摆①：cost
-function s.cfilter(c)
-	return c:IsSetCard(0x986) and c:IsAbleToGraveAsCost()
-end
+--灵摆①：cost（哨兵标记）
 function s.pencost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then
-		return Duel.IsExistingMatchingCard(s.cfilter,tp,LOCATION_DECK,0,1,nil)
-	end
-	local g=Duel.GetMatchingGroup(s.cfilter,tp,LOCATION_DECK,0,nil)
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TOGRAVE)
-	local sg=g:SelectSubGroup(tp,aux.dncheck,false,1,g:GetCount())
-	if sg and #sg>0 then
-		local ct=Duel.SendtoGrave(sg,REASON_COST)
-		e:SetLabel(ct)
-	else
-		e:SetLabel(0)
-	end
+	e:SetLabel(100)
+	return true
 end
 
 --灵摆①：target
-function s.spfilter(c,e,tp,n)
-	return c:IsSetCard(0x986) and c:IsType(TYPE_PENDULUM) and c:GetLevel()==n
+function s.cfilter(c)
+	return c:IsSetCard(0x986) and c:IsAbleToGraveAsCost()
+end
+function s.spfilter(c,e,tp,lv)
+	return c:IsSetCard(0x986) and c:IsType(TYPE_PENDULUM) and c:IsLevelBelow(lv)
 		and c:IsCanBeSpecialSummoned(e,0,tp,false,false)
 end
 function s.pentg(e,tp,eg,ep,ev,re,r,rp,chk)
-	local n=e:GetLabel()
 	if chk==0 then
-		return n>0 and Duel.GetLocationCount(tp,LOCATION_MZONE)>0
-			and Duel.IsExistingMatchingCard(s.spfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,nil,e,tp,n)
+		if e:GetLabel()~=100 then return false end
+		e:SetLabel(0)
+		local cg=Duel.GetMatchingGroup(s.cfilter,tp,LOCATION_DECK,0,nil)
+		return Duel.GetLocationCount(tp,LOCATION_MZONE)>0 and cg:GetCount()>0
+			and Duel.IsExistingMatchingCard(s.spfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,nil,e,tp,cg:GetClassCount(Card.GetCode))
 	end
+	local cg=Duel.GetMatchingGroup(s.cfilter,tp,LOCATION_DECK,0,nil)
+	local ct=cg:GetClassCount(Card.GetCode)
+	local tg=Duel.GetMatchingGroup(s.spfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,nil,e,tp,ct)
+	local lvt={}
+	local tc=tg:GetFirst()
+	while tc do
+		local tlv=tc:GetLevel()
+		lvt[tlv]=tlv
+		tc=tg:GetNext()
+	end
+	local pc=1
+	for i=1,12 do
+		if lvt[i] then lvt[i]=nil lvt[pc]=i pc=pc+1 end
+	end
+	lvt[pc]=nil
+	Duel.Hint(HINT_SELECTMSG,tp,aux.Stringid(id,5))
+	local lv=Duel.AnnounceNumber(tp,table.unpack(lvt))
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_TOGRAVE)
+	aux.GCheckAdditional=aux.dncheck
+	local rg=cg:SelectSubGroup(tp,aux.TRUE,false,lv,lv)
+	aux.GCheckAdditional=nil
+	Duel.SendtoGrave(rg,REASON_COST)
+	e:SetLabel(lv)
 	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_DECK+LOCATION_GRAVE)
 end
 
 --灵摆①：operation
+function s.spfilter2(c,e,tp,lv)
+	return c:IsSetCard(0x986) and c:IsType(TYPE_PENDULUM) and c:IsLevel(lv)
+		and c:IsCanBeSpecialSummoned(e,0,tp,false,false)
+end
 function s.penop(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	local n=e:GetLabel()
-	if n<=0 then return end
-	if Duel.GetLocationCount(tp,LOCATION_MZONE)>0 then
-		Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
-		local g=Duel.SelectMatchingCard(tp,s.spfilter,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,1,nil,e,tp,n)
-		if #g>0 then
-			Duel.SpecialSummon(g,0,tp,tp,false,false,POS_FACEUP)
-		end
+	if Duel.GetLocationCount(tp,LOCATION_MZONE)<=0 then return end
+	local lv=e:GetLabel()
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
+	local g=Duel.SelectMatchingCard(tp,s.spfilter2,tp,LOCATION_DECK+LOCATION_GRAVE,0,1,1,nil,e,tp,lv)
+	if #g>0 then
+		Duel.SpecialSummon(g,0,tp,tp,true,false,POS_FACEUP)
 	end
 	--这个回合自己不是「混沌时空」卡不能把效果发动
+	local c=e:GetHandler()
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_FIELD)
 	e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
